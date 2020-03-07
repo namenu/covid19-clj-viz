@@ -1,6 +1,7 @@
 (ns appliedsciencestudio.covid19-clj-viz.viz
   (:require [appliedsciencestudio.covid19-clj-viz.china :as china]
             [appliedsciencestudio.covid19-clj-viz.deutschland :as deutschland]
+            [appliedsciencestudio.covid19-clj-viz.korea :as korea]
             [clojure.data.csv :as csv]
             [clojure.string :as string]
             [jsonista.core :as json]
@@ -13,6 +14,25 @@
 (comment
 
   ;;;; Create new GeoJSONs with population & COVID19 data added
+
+  ;; South Korea
+  ;; http://ncov.mohw.go.kr/bdBoardList_Real.do?brdId=1&brdGubun=13&ncvContSeq=&contSeq=&board_id=&gubun=
+  (->> (update (json/read-value (java.io.File. "resources/public/public/data/korea-original.geo.json")
+                                (json/object-mapper {:decode-key-fn true}))
+               :features
+               (fn [features]
+                 (mapv (fn [feature]
+                         (let [name (-> feature :properties :sgg_nm)
+                               cases (get-in korea/cases [name :confirmed])
+                               pop (get korea/population name)
+                               cases-per-100k (double (/ cases (/ pop 100000)))]
+                           (assoc feature
+                             :province name
+                             :cases cases
+                             :population pop
+                             :cases-per-100k cases-per-100k)))
+                       features)))
+       (json/write-value (java.io.File. "resources/public/public/data/korea.geo.json")))
 
   ;; Germany
   ;; medium quality GeoJSON from https://github.com/isellsoap/deutschlandGeoJSON/blob/master/2_bundeslaender/3_mittel.geojson
@@ -257,3 +277,17 @@
                                        {:field "cases-per-100k" :type "quantitative"}]}}))
 
 ;; Beyond this we rely on charts.
+
+;; Geographic visualization of cases in each South Korea state
+(oz/view! (merge oz-config china-dimensions
+                 {:title "COVID19 cases in South Korea per 100k inhabitants, log-scaled"
+                  :data {:name "map"
+                         :url "/public/data/korea.geo.json",
+                         :format {:property "features"}},
+                  :mark {:type "geoshape" :stroke "white" :strokeWidth 1}
+                  :encoding {:color {:field "cases-per-100k",
+                                     :scale {:type "log"}
+                                     :type "quantitative"}
+                             :tooltip [{:field "province" :type "nominal"}
+                                       {:field "cases" :type "quantitative"}
+                                       {:field "cases-per-100k" :type "quantitative"}]}}))
