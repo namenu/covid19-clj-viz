@@ -278,8 +278,22 @@
 
 ;; Beyond this we rely on charts.
 
+(def korea-dimensions
+  {:width 570 :height 450})
+
+;; Deceptive South Korea choropleth
+(oz/view! (merge oz-config korea-dimensions
+                 {:data {:name "map"
+                         :url "/public/data/korea.geo.json"
+                         :format {:property "features"}},
+                  :mark {:type "geoshape" :stroke "white" :strokeWidth 1}
+                  :encoding {:color {:field "cases",
+                                     :type "quantitative"}
+                             :tooltip [{:field "province" :type "nominal"}
+                                       {:field "cases" :type "quantitative"}]}}))
+
 ;; Geographic visualization of cases in each South Korea state
-(oz/view! (merge oz-config china-dimensions
+(oz/view! (merge oz-config korea-dimensions
                  {:title "COVID19 cases in South Korea per 100k inhabitants, log-scaled"
                   :data {:name "map"
                          :url "/public/data/korea.geo.json",
